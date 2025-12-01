@@ -308,11 +308,11 @@ def matrix_nms(seg_mask, cate_labels, cate_scores, sigma: float = 2.0, sum_masks
     seg_mask = seg_mask.reshape(n_samples, -1).float()
     # inter
     inter_matrix = torch.mm(seg_mask, seg_mask.transpose(1, 0))
-    # union.
+    # union
     sum_masks_x = sum_masks.expand(n_samples, n_samples)
-    # iou.
+    # iou
     iou_matrix = (inter_matrix / (sum_masks_x + sum_masks_x.transpose(1, 0) - inter_matrix)).triu(diagonal=1)
-    # label_specific matrix.
+    # label_specific matrix
     cate_labels_x = cate_labels.expand(n_samples, n_samples)
     label_matrix = (cate_labels_x == cate_labels_x.transpose(1, 0)).float().triu(diagonal=1)
 
@@ -328,7 +328,7 @@ def matrix_nms(seg_mask, cate_labels, cate_scores, sigma: float = 2.0, sum_masks
     compensate_matrix = torch.exp(-1 * sigma * (compensate_iou ** 2))
     decay_coefficient, _ = (decay_matrix / compensate_matrix).min(0)
 
-    # update the score.
+    # update the score
     cate_scores_update = cate_scores * decay_coefficient
     return cate_scores_update
 
@@ -336,4 +336,4 @@ def matrix_nms(seg_mask, cate_labels, cate_scores, sigma: float = 2.0, sum_masks
 def multi_apply(func, *args, **kwargs):
     pfunc = partial(func, **kwargs) if kwargs else func
     map_results = map(pfunc, *args)
-    return tuple(map(list, zip(*map_results)))    
+    return tuple(map(list, zip(*map_results)))
