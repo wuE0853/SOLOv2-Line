@@ -337,3 +337,43 @@ def multi_apply(func, *args, **kwargs):
     pfunc = partial(func, **kwargs) if kwargs else func
     map_results = map(pfunc, *args)
     return tuple(map(list, zip(*map_results)))
+
+
+def get_seg_mask(classes, polygons, img_h, img_w):
+    all_masks = []
+    for i, shape in enumerate(polygons):
+        label = shape['category']
+        if label not in classes:
+            raise ValueError(f'类别"{label}"不存在。')
+
+        mask = np.zeros((img_h, img_w), dtype=np.uint8)
+
+        if shape['shape_type'] in ('多边形', 'Polygon'):
+            points = [np.array([list(point) for point in shape['img_points']])]
+            cv2.fillPoly(mask, points, 1)
+        elif shape['shape_type'] in ('矩形', 'Rectangle'):
+            cv2.rectangle(mask, tuple(shape['img_points'][0]), tuple(shape['img_points'][1]), 1, -1)
+        elif shape['shape_type'] in ('椭圆形', 'Ellipse'):
+            tl, br = tuple(shape['img_points'][0]), tuple(shape['img_points'][1])
+            cx, cy = int((tl[0] + br[0]) / 2), int((tl[1] + br[1]) / 2)
+            half_l, half_s = int((br[0] - tl[0]) / 2), int((br[1] - tl[1]) / 2)
+            cv2.ellipse(mask, (cx, cy), (half_l, half_s), 0, 0, 360, color=1, thickness=-1)
+        elif shape['shape_type'] in ('环形', 'Ring'):
+            mask1 = np.zeros((img_h, img_w), dtype=np.uint8)
+            mask2 = np.zeros((img_h, img_w), dtype=np.uint8)
+            points1 = [np.array([tuple(point) for point in shape['img_points'][0]])]
+            points2 = [np.array([tuple(point) for point in shape['img_points'][1]])]
+            cv2.fillPoly(mask1, points1, 1)
+            cv2.fillPoly(mask2, points2, 1)
+            mask1 = np.asfortranarray(mask1, dtype='uint8')
+            mask2 = np.asfortranarray(mask2, dtype='uint8')
+            mask2 = ~(mask2.astype('bool'))
+            mask = mask1 * mask2
+        elif shape['shape_type'] in ('像素', 'Pixel'):
+            for point in shape['img_points']:
+                mask[point[1], point[0]] = 1
+
+        mask = np.asfortranarray(mask, dtype='uint8')
+        all_masks.append(mask)
+
+    return all_masks
