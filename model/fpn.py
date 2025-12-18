@@ -1,6 +1,6 @@
 import torch.nn as nn
 import torch.nn.functional as F
-form utils.utils import xavier_init, ConvModule
+from utils.utils import xavier_init, ConvModule
 
 class FPN(nn.module):
     def __init__(self,
@@ -50,7 +50,7 @@ class FPN(nn.module):
                 out_channels,
                 1,
                 norm_cfg=None,
-                activation=self.activation
+                activation=self.activation,
                 inplace=False)
             fpn_conv = ConvModule(
                 out_channels,
@@ -58,9 +58,39 @@ class FPN(nn.module):
                 3,
                 padding=1,
                 norm_cfg=None,
-                activation=self.activation
+                activation=self.activation,
                 inplace=False
             )
 
             self.lateral_convs.append(l_conv)
             self.fpn_convs.append(fpn_conv)
+
+    # default init_weights for conv(msra) and norm in ConvModule
+    def init_weights(self):
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                xavier_init(m, distribution='uniform')
+
+    def forward(self, inputs):
+        assert len(inputs) == len(self.in_channels)
+
+        # build laterals
+        laterals = [lateral_conv(inputs[i + self.start_level])
+                    for i, lateral_conv in enumerate(self.lateral_convs)]
+
+        # build top-down path
+        used_backbone_levels = len(laterals)
+        for i in range(used_backbone_levels - 1, 0, -1):
+            laterals[i - 1] += F.interpolate(laterals[i], scale_factor=2, mode='nearest')
+
+        # build outputs
+        # part 1: from original levels
+        outs = [self.fpn_convs[i](laterals[i]) for i in range(used_backbone_levels)]
+        # part 2: add extra levels
+        if self.num_outs > len(outs):
+            # use max pool to get more levels on top of outputs
+            # (e.g., Faster R-CNN, Mask R-CNN)
+            for i in range(self.num_outs - used_backbone_levels):
+                outs.append(F.max_pool2d(outs[-1], 1, stride=2))
+
+        return tuple(outs)
