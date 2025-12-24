@@ -76,7 +76,7 @@ if __name__ =='__main__':
             gt_bboxes = [one.cuda().detach() for one in gt_bboxes]
             # show_ann(img, gt_bboxes, gt_masks)
 
-            if cfg.warm_up_iters > 0 and step <= warm_up_ters:
+            if cfg.warm_up_iters > 0 and step <= cfg.warm_up_iters:
                 for param_group in optimizer.param_groups:
                     param_group['lr'] = (cfg.lr - cfg.warm_up_init) * (step / cfg.warm_up_iters) + cfg.warm_up_init
 
@@ -90,7 +90,7 @@ if __name__ =='__main__':
                 loss_total = loss_cate + loss_ins
 
             with timer.counter('backward'):
-                optimizer.zero.grad()
+                optimizer.zero_grad()
                 loss_total.backward()
                 clip_grad.clip_grad_norm(filter(lambda p: p.requires_grad, model.parameters()),
                                          max_norm=35, norm_type=2)

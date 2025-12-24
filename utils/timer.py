@@ -82,4 +82,4 @@ class counter:
     def __exit__(self, e, ev, t):
         if self.started:
             torch.cuda.synchronize()
-            self.times[self.name][-1] = time.perf_counter()
+            self.times[self.name][-1] = time.perf_counter() - self.times[self.name][-1]

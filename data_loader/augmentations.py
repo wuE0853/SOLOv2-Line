@@ -41,7 +41,7 @@ def random_resize(img, bboxes=None, masks=None, img_scale=None):
     if bboxes is not None:
         bboxes *= scale
     if masks is not None:
-        masks = cv2.reszie(masks, (new_w, new_h), cv2.INTER_NEAREST)
+        masks = cv2.resize(masks, (new_w, new_h), cv2.INTER_NEAREST)
         if masks.ndim == 2:
             masks = masks[:, :, None]
 
@@ -117,7 +117,7 @@ class TrainAug:
     def __call__(self, img, bboxes, masks):
         assert img.shape[:2] == masks.shape[:2], 'img shape != masks shape before doing transformation'
         img, bboxes, masks = random_flip(img, bboxes, masks, v_flip=self.v_flip)
-        img, bboxes, masks = random_resize(img, bboxes, masks, v_flip=self.v_flip)
+        img, bboxes, masks = random_resize(img, bboxes, masks, img_scale=self.img_scale)
         bboxes = clip_box(img.shape[:2], bboxes)
         # show_ann(img, bboxes, masks)
         img = normalize(img, self.norm_mean, self.norm_std)

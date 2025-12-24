@@ -108,9 +108,9 @@ class SOLOv2Head(nn.Module):
         self._init_layers()
 
     def _init_layers(self):
-        norm_cfg = dict(type='GN', num_groups=32, requires_grad=True):
+        norm_cfg = dict(type='GN', num_groups=32, requires_grad=True)
         self.cate_convs = nn.ModuleList()
-        self.kernel_convs = nn.Modulelist()
+        self.kernel_convs = nn.ModuleList()
         for i in range(self.stacked_convs):
             chn = self.in_channels + 2 if i == 0 else self.seg_feat_channels
             self.kernel_convs.append(ConvModule(chn,
@@ -135,7 +135,7 @@ class SOLOv2Head(nn.Module):
 
             self.solo_kernel = nn.Conv2d(self.seg_feat_channels, self.kernel_out_ch, 3, padding=1)
 
-    def init_weight(self):
+    def init_weights(self):
         for m in self.cate_convs:
             normal_init(m.conv, std=0.01)
         for m in self.kernel_convs:

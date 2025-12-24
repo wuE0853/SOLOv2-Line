@@ -211,7 +211,7 @@ class ConvModule(nn.module):
             sequence of "conv", "norm" and "act". Examples are
             ("conv", "norm", "act") and ("act", "conv", "norm").
     """
-    def _init_(self,
+    def __init__(self,
                in_channels,
                out_channel,
                kernel_size,
@@ -224,7 +224,7 @@ class ConvModule(nn.module):
                activation='relu',
                inplace=True,
                order=('conv', 'norm', 'act')):
-        super(ConvModule, self)._init_()
+        super(ConvModule, self).__init__()
         assert norm_cfg is None or isinstance(norm_cfg, dict), 'norm_cfg has wrong type'
         self.activation = activation
         self.inplace = inplace

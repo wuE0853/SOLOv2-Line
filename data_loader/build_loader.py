@@ -149,7 +149,7 @@ def batch_collator_random_pad(batch):
         pad_bboxes_batch.append(torch.tensor(pad_bboxes, dtype=torch.float32))
 
         ori_masks = masks_batch[i]
-        pad_masks = np.zeros((batch_shape[1], batch_shape[2], ori_masks.shape[2]), dtype=torch.float32)
+        pad_masks = np.zeros((batch_shape[1], batch_shape[2], ori_masks.shape[2]), dtype='uint8')
         pad_masks[new_h:(new_h + ori_h), new_w:(new_w + ori_w), :] = ori_masks
         pad_masks_batch.append(pad_masks.transpose(2, 0, 1).astype('uint8'))
 
@@ -191,7 +191,7 @@ def make_data_loader(cfg):
         sampler = data.RandomSampler(dataset)
         batch_sampler = group_sampler(sampler, group_ids, cfg.train_bs, drop_uneven=False) # same as drop_last
         return data.DataLoader(dataset, num_workers=cfg.train_workers, 
-                               batch_sampeler=batch_sampler, collate_fn=batch_collator_random_pad)
+                               batch_sampler=batch_sampler, collate_fn=batch_collator_random_pad)
     
     else:
         if cfg.mode == 'val':

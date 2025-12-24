@@ -3,7 +3,7 @@
 import pdb
 from data_loader.dataset import CocoIns, LineIns
 from data_loader.augmentations import TrainAug, ValAug
-from utils.utils import COCO_CLASSES
+# from utils.utils import COCO_CLASSES
 from utils.onnx_trans import *
 
 TrainBatchSize = 16
@@ -22,7 +22,9 @@ class Solov2_res50:
         self.break_weight = ''
         self.resnet_depth = 50
         self.fpn_in_c = [256, 512, 1024, 2048]
-        self.class_names = COCO_CLASSES
+
+        # self.class_names = COCO_CLASSES
+        self.class_names = ('_background_', 'Line')
         self.num_classes = len(self.class_names)
         self.head_stacked_convs = 4
         self.head_seg_feat_c = 512
