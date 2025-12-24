@@ -15,7 +15,7 @@ import pycocotools.mask as mask_util
 
 def val(cfg, model = None):
     if model is None:
-        model = SOLOv2(config).cuda()
+        model = SOLOv2(cfg).cuda()
         state_dict = torch.load(cfg.val_weight)
         if 'state_dict' in state_dict.keys():
             state_dict = state_dict['state_dict']
@@ -71,7 +71,7 @@ def val(cfg, model = None):
         if timer.started():
             t_batch, t_data, t_forward, t_metric = timer.get_times(['batch', 'data', 'forward', 'metric'])
             seconds = (val_num - i) * t_batch
-            eta = str(datatime.timedelta(seconds)).split('.')
+            eta = str(datetime.timedelta(seconds)).split('.')
 
             print(f'\rstep: {i}/{val_num} | t_batch: {t_batch:.3f} | t_d: {t_data:.3f} | t_f: {t_forward:.3f} | t_m: {t_metric:.3f} |'
                   f'ETA: {eta}', end='')
