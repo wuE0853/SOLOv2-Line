@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python 
 # -*- coding:utf-8 -*-
 import os
 import pdb
@@ -13,14 +13,14 @@ from data_loader.build_loader import make_data_loader
 import pycocotools.mask as mask_util
 
 
-def val(cfg, model = None):
+def val(cfg, model=None):
     if model is None:
         model = SOLOv2(cfg).cuda()
         state_dict = torch.load(cfg.val_weight)
         if 'state_dict' in state_dict.keys():
             state_dict = state_dict['state_dict']
         model.load_state_dict(state_dict, strict=True)
-        print(f'Evaluating "{cfg.val_weight}"')
+        print(f'Evaluating "{cfg.val_weight}".')
     
     cfg.eval()
     model.eval()
@@ -32,7 +32,7 @@ def val(cfg, model = None):
     timer.reset(reset_at=0)
 
     dt_id = 1 #cannot be the value that equal to  False(bool)
-    json_result = []
+    json_results = []
     for i, (img, ori_shape, resize_shape, _) in enumerate(data_loader):
         timer.start(i)
 
@@ -55,45 +55,45 @@ def val(cfg, model = None):
 
                     # rle encoding(游程编码) to reduce the space cost
                     rle = mask_util.encode(np.array(cur_mask[:, :, np.newaxis], order='F'))[0]
-                    rle['count'] = rle['count'].decode
+                    rle['counts'] = rle['counts'].decode()
                     data['segmentation'] = rle
 
                     if 'Coco' in dataset.__class__.__name__ or 'Line' in dataset.__class__.__name__:
-                        data['categoty_id'] = dataset.cate_ids[cate_label[j] + 1]
+                        data['category_id'] = dataset.cate_ids[cate_label[j] + 1]
                     # else:
                     # The need of NonCOCO dataset
 
                     dt_id += 1
-                    json_result.append(data)
+                    json_results.append(data)
         
         timer.add_batch_time()
 
-        if timer.started():
+        if timer.started:
             t_batch, t_data, t_forward, t_metric = timer.get_times(['batch', 'data', 'forward', 'metric'])
             seconds = (val_num - i) * t_batch
-            eta = str(datetime.timedelta(seconds)).split('.')
+            eta = str(datetime.timedelta(seconds=seconds)).split('.')[0]
 
             print(f'\rstep: {i}/{val_num} | t_batch: {t_batch:.3f} | t_d: {t_data:.3f} | t_f: {t_forward:.3f} | t_m: {t_metric:.3f} |'
                   f'ETA: {eta}', end='')
             
-            print('\n\n')
+    print('\n\n')
 
-            file_folder = 'result/val'
-            os.makedirs(file_folder, exist_ok=True)
-            file_path = f'{file_folder}/{cfg.name()}.json'
-            with open(file_path, 'w') as f:
-                json.dump(json_result, f)
-            print(f'val result dumped: {file_path}.\n')
+    file_folder = 'results/val'
+    os.makedirs(file_folder, exist_ok=True)
+    file_path = f'{file_folder}/{cfg.name()}.json'
+    with open(file_path, "w") as f:
+        json.dump(json_results, f)
+    print(f'val result dumped: {file_path}.\n')
 
-            if 'Coco' in dataset.__class__.__name__ or 'Line' in dataset.__class__.__name__:
-                coco_dt = dataset.coco.loadRes(file_path)
-                segm_eval = SelfEval(dataset.coco, coco_dt)
-            # else:
-            # nonCOCO dataset and annotations should use other funcntion to get gt and dt
+    if 'Coco' in dataset.__class__.__name__ or 'Line' in dataset.__class__.__name__:
+        coco_dt = dataset.coco.loadRes(file_path)
+        segm_eval = SelfEval(dataset.coco, coco_dt)
+    # else:
+    # nonCOCO dataset and annotations should use other funcntion to get gt and dt
 
-            segm_eval.evaluate()
-            segm_eval.accumulate()
-            segm_eval.summarize()
+    segm_eval.evaluate()
+    segm_eval.accumulate()
+    segm_eval.summarize()
 
 
 if __name__ == '__main__':

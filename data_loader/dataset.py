@@ -112,131 +112,132 @@ class CocoIns(data.Dataset):
         
 
 # This class is also useful, the function can work.
-# class LineIns(data.Dataset):
-#     def __init__(self, cfg):
-#         self.cfg = cfg
-#         self.mode = cfg.mode
+class LineIns(data.Dataset):
+    def __init__(self, cfg):
+        self.cfg = cfg
+        self.mode = cfg.mode
 
-#         if cfg.mode in ('train', 'val'):
-#             self.image_folder = cfg.train_imgs if cfg.mode == 'train' else cfg.val_imgs
-#             self.coco = COCO(cfg.train_ann if cfg.mode == 'train' else cfg.val_ann)
-#             self.ids = list(self.coco.imgToAnns.keys())
+        if cfg.mode in ('train', 'val'):
+            self.image_folder = cfg.train_imgs if cfg.mode == 'train' else cfg.val_imgs
+            self.coco = COCO(cfg.train_ann if cfg.mode == 'train' else cfg.val_ann)
+            self.ids = list(self.coco.imgToAnns.keys())
             
-#             # 动态构建类别映射
-#             self.categories = self.coco.loadCats(self.coco.getCatIds())
-#             self.category_ids = [cat['id'] for cat in self.categories]
-#             self.category_names = [cat['name'] for cat in self.categories]
+            # 动态构建类别映射
+            self.categories = self.coco.loadCats(self.coco.getCatIds())
+            self.category_ids = [cat['id'] for cat in self.categories]
+            self.category_names = [cat['name'] for cat in self.categories]
             
-#             # 创建从原始类别ID到连续整数(0-indexed)的映射
-#             self.original_to_contiguous = {
-#                 orig_id: cont_id for cont_id, orig_id in enumerate(self.category_ids)
-#             }
-#             self.contiguous_to_original = {
-#                 cont_id: orig_id for orig_id, cont_id in self.original_to_contiguous.items()
-#             }
+            # 创建从原始类别ID到连续整数(0-indexed)的映射
+            self.original_to_contiguous = {
+                orig_id: cont_id for cont_id, orig_id in enumerate(self.category_ids)
+            }
+            self.contiguous_to_original = {
+                cont_id: orig_id for orig_id, cont_id in self.original_to_contiguous.items()
+            }
+            self.cate_ids = self.original_to_contiguous
             
-#         elif cfg.mode == 'detect':
-#             self.image_folder = glob.glob(f'{cfg.detect_images}/*')
-#             self.image_folder = [one for one in self.image_folder if one[-3:] in ('bmp', 'jpg', 'png')]
-#             self.image_folder.sort()
-#             # 检测模式下可能需要预设类别映射，或者从配置文件加载
-#             if hasattr(cfg, 'category_mapping'):
-#                 self.original_to_contiguous = cfg.category_mapping
-#             else:
-#                 # 默认映射，需要根据实际情况调整
-#                 self.original_to_contiguous = {}
+        elif cfg.mode == 'detect':
+            self.image_folder = glob.glob(f'{cfg.detect_images}/*')
+            self.image_folder = [one for one in self.image_folder if one[-3:] in ('bmp', 'jpg', 'png')]
+            self.image_folder.sort()
+            # 检测模式下可能需要预设类别映射，或者从配置文件加载
+            if hasattr(cfg, 'category_mapping'):
+                self.original_to_contiguous = cfg.category_mapping
+            else:
+                # 默认映射，需要根据实际情况调整
+                self.original_to_contiguous = {}
         
-#     def __getitem__(self, index):
-#         if self.mode == 'detect':
-#         # 检测模式代码保持不变
-#             img_path = self.image_folder[index]
-#             img_origin = cv2.imdecode(np.fromfile(img_path, dtype='uint8'), cv2.IMREAD_COLOR)
-#             img, resize_shape = self.cfg.val_aug(img_origin)
-#             img_show = cv2.resize(img_origin, (resize_shape[1], resize_shape[0]))
-#             return img, resize_shape, img_path.split('/')[-1], img_show
-#         else:
-#             img_id = self.ids[index]
-#             ann_ids = self.coco.getAnnIds(imgIds=img_id)
-#             target = self.coco.loadAnns(ann_ids)
-#             target = [aa for aa in target if not aa['iscrowd']]
+    def __getitem__(self, index):
+        if self.mode == 'detect':
+        # 检测模式代码保持不变
+            img_path = self.image_folder[index]
+            img_origin = cv2.imdecode(np.fromfile(img_path, dtype='uint8'), cv2.IMREAD_COLOR)
+            img, resize_shape = self.cfg.val_aug(img_origin)
+            img_show = cv2.resize(img_origin, (resize_shape[1], resize_shape[0]))
+            return img, resize_shape, img_path.split('/')[-1], img_show
+        else:
+            img_id = self.ids[index]
+            ann_ids = self.coco.getAnnIds(imgIds=img_id)
+            target = self.coco.loadAnns(ann_ids)
+            target = [aa for aa in target if not aa['iscrowd']]
 
-#             file_name = self.coco.loadImgs(img_id)[0]['file_name']
-#             img_path = osp.join(self.image_folder, file_name)
-#             assert osp.exists(img_path), f'Image path does not exist: {img_path}'
+            file_name = self.coco.loadImgs(img_id)[0]['file_name']
+            img_path = osp.join(self.image_folder, file_name)
+            assert osp.exists(img_path), f'Image path does not exist: {img_path}'
 
-#             img = cv2.imdecode(np.fromfile(img_path, dtype='uint8'), cv2.IMREAD_COLOR)
-#             height, width, _ = img.shape
+            img = cv2.imdecode(np.fromfile(img_path, dtype='uint8'), cv2.IMREAD_COLOR)
+            height, width, _ = img.shape
 
-#             assert len(target) > 0, 'No annotation in this image!'
-#             box_list, mask_list, label_list = [], [], []
+            assert len(target) > 0, 'No annotation in this image!'
+            box_list, mask_list, label_list = [], [], []
 
-#             for aa in target:
-#                 bbox = aa['bbox']
-#                 original_category_id = aa['category_id']
+            for aa in target:
+                bbox = aa['bbox']
+                original_category_id = aa['category_id']
             
-#                 # 使用动态映射转换类别ID
-#                 if original_category_id in self.original_to_contiguous:
-#                     contiguous_category_id = self.original_to_contiguous[original_category_id]
-#                 else:
-#                     # 如果遇到未知类别，跳过该标注
-#                     continue
+                # 使用动态映射转换类别ID
+                if original_category_id in self.original_to_contiguous:
+                    contiguous_category_id = self.original_to_contiguous[original_category_id]
+                else:
+                    # 如果遇到未知类别，跳过该标注
+                    continue
 
-#                 # When training, some boxes are wrong, ignore them.
-#                 if self.mode == 'train':
-#                     if bbox[0] < 0 or bbox[1] < 0 or bbox[2] < 4 or bbox[3] < 4:
-#                         continue
+                # When training, some boxes are wrong, ignore them.
+                if self.mode == 'train':
+                    if bbox[0] < 0 or bbox[1] < 0 or bbox[2] < 4 or bbox[3] < 4:
+                        continue
 
-#                 label_list.append(contiguous_category_id)  # 使用映射后的类别ID
-#                 x1y1x2y2_box = np.array([bbox[0], bbox[1], bbox[0] + bbox[2], bbox[1] + bbox[3]])
-#                 box_list.append(x1y1x2y2_box)
-#                 mask_list.append(self.coco.annToMask(aa))
+                label_list.append(contiguous_category_id)  # 使用映射后的类别ID
+                x1y1x2y2_box = np.array([bbox[0], bbox[1], bbox[0] + bbox[2], bbox[1] + bbox[3]])
+                box_list.append(x1y1x2y2_box)
+                mask_list.append(self.coco.annToMask(aa))
 
-#             if len(label_list) > 0:
-#                 labels = np.array(label_list)
-#                 bboxes = np.array(box_list)
-#                 masks = np.stack(mask_list, axis=2)  # (h, w, num)
+            if len(label_list) > 0:
+                labels = np.array(label_list)
+                bboxes = np.array(box_list)
+                masks = np.stack(mask_list, axis=2)  # (h, w, num)
 
-#                 assert masks.shape == (height, width, labels.shape[0]), 'Unmatched annotations.'
+                assert masks.shape == (height, width, labels.shape[0]), 'Unmatched annotations.'
 
-#                 if self.mode == 'train':
-#                     img, bboxes, masks = self.cfg.train_aug(img, bboxes, masks)
-#                     return img, labels, bboxes, masks
-#                 elif self.mode == 'val':
-#                     img, resize_shape = self.cfg.val_aug(img)
-#                     return img, (height, width), resize_shape, file_name
-#             else:
-#                 if self.mode == 'val':
-#                     raise RuntimeError('Error, no valid object in this image.')
-#                 else:
-#                     print(f'No valid object in image "img_id: {img_id}". Use a repeated image in this batch.')
-#                     return None, None, None, None
+                if self.mode == 'train':
+                    img, bboxes, masks = self.cfg.train_aug(img, bboxes, masks)
+                    return img, labels, bboxes, masks
+                elif self.mode == 'val':
+                    img, resize_shape = self.cfg.val_aug(img)
+                    return img, (height, width), resize_shape, file_name
+            else:
+                if self.mode == 'val':
+                    raise RuntimeError('Error, no valid object in this image.')
+                else:
+                    print(f'No valid object in image "img_id: {img_id}". Use a repeated image in this batch.')
+                    return None, None, None, None
                 
-#     def get_aspect_ratios(self):
-#         """获取图片宽高比"""
-#         aspect_ratios = []
-#         ids_to_use = self.ids if self.mode in ('train', 'val') else range(len(self.image_folder))
+    def get_aspect_ratios(self):
+        """获取图片宽高比"""
+        aspect_ratios = []
+        ids_to_use = self.ids if self.mode in ('train', 'val') else range(len(self.image_folder))
     
-#         for one in ids_to_use:
-#             if self.mode in ('train', 'val'):
-#                 img_info = self.coco.loadImgs(one)[0]
-#             else:
-#                 # 检测模式下需要读取图片尺寸
-#                 img_path = self.image_folder[one]
-#                 img = cv2.imdecode(np.fromfile(img_path, dtype='uint8'), cv2.IMREAD_COLOR)
-#                 height, width = img.shape[:2]
-#                 aspect_ratios.append(float(height) / float(width))
-#                 continue
+        for one in ids_to_use:
+            if self.mode in ('train', 'val'):
+                img_info = self.coco.loadImgs(one)[0]
+            else:
+                # 检测模式下需要读取图片尺寸
+                img_path = self.image_folder[one]
+                img = cv2.imdecode(np.fromfile(img_path, dtype='uint8'), cv2.IMREAD_COLOR)
+                height, width = img.shape[:2]
+                aspect_ratios.append(float(height) / float(width))
+                continue
             
-#             aspect_ratios.append(float(img_info['height']) / float(img_info['width']))
-#         return aspect_ratios
+            aspect_ratios.append(float(img_info['height']) / float(img_info['width']))
+        return aspect_ratios
 
-#     def __len__(self):
-#         if self.mode == 'train':
-#             return len(self.ids)
-#         elif self.mode == 'val':
-#             return len(self.ids) if self.cfg.val_num == -1 else min(self.cfg.val_num, len(self.ids))
-#         elif self.mode == 'detect':
-#             return len(self.image_folder)
+    def __len__(self):
+        if self.mode == 'train':
+            return len(self.ids)
+        elif self.mode == 'val':
+            return len(self.ids) if self.cfg.val_num == -1 else min(self.cfg.val_num, len(self.ids))
+        elif self.mode == 'detect':
+            return len(self.image_folder)
 
 
 # The class for seperated annotations(one image with one .json annotation)

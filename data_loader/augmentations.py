@@ -31,10 +31,13 @@ def random_resize(img, bboxes=None, masks=None, img_scale=None):
     h, w = img.shape[:2]
 
     short_side, long_side = min(h, w), max(h, w)
-    scale = min(min_size / short_side, max_size / long_side)
+    if min_size / short_side * long_side > max_size:
+        scale = max_size / long_side
+    else:
+        scale = min_size / short_side
 
     new_h, new_w = int(scale * h), int(scale * w)
-    assert min(new_h, new_w) <= min_size and  max(new_h, new_w) <= max_size, 'Scale error when resizing'
+    assert min(new_h, new_w) <= min_size and max(new_h, new_w) <= max_size, 'Scale error when resizing.'
 
     img = cv2.resize(img, (new_w, new_h))
 
@@ -48,7 +51,7 @@ def random_resize(img, bboxes=None, masks=None, img_scale=None):
     return img, bboxes, masks
 
 
-def pad_tp_size_divisor(img, masks=None, size_divisor=32, pad_value=None):
+def pad_to_size_divisor(img, masks=None, size_divisor=32, pad_value=None):
     h, w = img.shape[:2]
     pad_h, pad_w = h, w
     if h % size_divisor != 0:
@@ -95,9 +98,9 @@ def pad_to_size_divisor_float(img, masks=None, size_divisor=32):
         return pad_img, pad_masks
     
 
-def normalize(img, mean:np.array, std:np.ndarray):
+def normalize(img, mean: np.ndarray, std: np.ndarray):
     img = img[:, :, (2, 1, 0)] # to RGB first
-    img = (img -mean)/std
+    img = (img - mean) / std
     return img # h, w, c, in rgb mode
 
 
@@ -111,7 +114,7 @@ class TrainAug:
     def __init__(self, img_scale, mean=(123.675, 116.28, 103.53), std=(58.395, 57.12, 57.375), v_flip=False):
         self.img_scale = img_scale
         self.norm_mean = np.array(mean, dtype='float32')
-        self.norm_std = np.array(std,dtype='float32')
+        self.norm_std = np.array(std, dtype='float32')
         self.v_flip = v_flip
 
     def __call__(self, img, bboxes, masks):

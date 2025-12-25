@@ -9,7 +9,7 @@ import torch
 import cv2
 import numpy as np
 
-form functools import partial
+from functools import partial
 from collections import OrderedDict
 
 os.makedirs('../weights', exist_ok=True)
@@ -17,9 +17,9 @@ os.makedirs('../weights', exist_ok=True)
 
 def constant_init(module, val, bias=0):
     if hasattr(module, 'weight') and module.weight is not None:
-        nn.init.constant_(module.weight ,val)
+        nn.init.constant_(module.weight, val)
     if hasattr(module, 'bias') and module.bias is not None:
-        nn.init.constant_(module.weight ,bias)
+        nn.init.constant_(module.bias, bias)
 
 
 def xavier_init(module, gain=1, bias=0, distribution='normal'):
@@ -45,7 +45,7 @@ def uniform_init(module, a=0, b=1, bias=0):
         nn.init.constant_(module.bias, bias)
 
 def kaiming_init(module,
-                 a=0, 
+                 a=0,
                  mode='fan_out',
                  nonlinearity='relu',
                  bias=0,
@@ -54,7 +54,7 @@ def kaiming_init(module,
     if distribution == 'uniform':
         nn.init.kaiming_uniform_(module.weight, a=a, mode=mode, nonlinearity=nonlinearity)
     else:
-        nn.init.kaiming_uniform_(module.weight, a=a, mode=mode, nonlinearity=nonlinearity)
+        nn.init.kaiming_normal_(module.weight, a=a, mode=mode, nonlinearity=nonlinearity)
     if hasattr(module, 'bias') and module.bias is not None:
         nn.init.constant_(module.bias, bias)
 
@@ -132,7 +132,7 @@ def load_state_dict(module, state_dict, strict=False):
 
 def bias_init_with_prob(prior_prob):
     # initialize conv/fc bias value according to giving prior probability
-    bias_init = float(-np.log(1 - prior_prob) / prior_prob)
+    bias_init = float(-np.log((1 - prior_prob) / prior_prob))
     return bias_init
 
 
@@ -165,7 +165,7 @@ def build_norm_layer(cfg, num_features, postfix=''):
 
     layer_type = cfg_.pop('type')
     if layer_type not in norm_cfg:
-        raise KeyError('Unrecognized norm type{}'.format(layer_type))
+        raise KeyError('Unrecognized norm type {}'.format(layer_type))
     else:
         abbr, norm_layer = norm_cfg[layer_type]
         if norm_layer is None:
@@ -181,7 +181,7 @@ def build_norm_layer(cfg, num_features, postfix=''):
         if layer_type == 'SyncBN':
             layer._specify_ddp_gpu_num(1)
         else:
-            assert ' num_groups' in cfg_, 'num_groups is necessary in GN'
+            assert 'num_groups' in cfg_, 'num_groups is necessary in GN'
             layer = norm_layer(num_channels=num_features, **cfg_)
         
         for param in layer.parameters():
@@ -190,7 +190,7 @@ def build_norm_layer(cfg, num_features, postfix=''):
         return name, layer
 
 
-class ConvModule(nn.module):
+class ConvModule(nn.Module):
     """A conv block that contains conv/norm/activation layers.
 
     Args:
@@ -213,7 +213,7 @@ class ConvModule(nn.module):
     """
     def __init__(self,
                in_channels,
-               out_channel,
+               out_channels,
                kernel_size,
                stride=1,
                padding=0,
@@ -230,7 +230,7 @@ class ConvModule(nn.module):
         self.inplace = inplace
         self.order = order
         assert isinstance(self.order, tuple) and len(self.order) == 3, 'The conv order is wrong'
-        assert set(order) == set(['conv', 'act', 'norm']), 'Unrecognized layer name in ConvModule'
+        assert set(order) == set(['conv', 'norm', 'act']), 'Unrecognized layer name in ConvModule'
 
         self.with_norm = norm_cfg is not None
         self.with_activation = activation is not None
@@ -240,11 +240,11 @@ class ConvModule(nn.module):
         self.with_bias = bias
 
         if self.with_norm and self.with_bias:
-            warnings('ConvModule has norm and bias at the same time.')
+            warnings.warn('ConvModule has norm and bias at the same time.')
 
         #build convolution layer
         self.conv = build_conv_layer(in_channels,
-                                     out_channel,
+                                     out_channels,
                                      kernel_size,
                                      stride=stride,
                                      padding=padding,
@@ -252,7 +252,7 @@ class ConvModule(nn.module):
                                      groups=groups,
                                      bias=bias)
         
-        #export the attributes of self.conv to a higher level for convenience
+        # export the attributes of self.conv to a higher level for convenience
         self.in_channels = self.conv.in_channels
         self.out_channels = self.conv.out_channels
         self.kernel_size = self.conv.kernel_size
@@ -264,7 +264,7 @@ class ConvModule(nn.module):
         self.groups = self.conv.groups
 
         if self.with_norm:
-            self.gn = nn.GroupNorm(num_groups=32, num_channels=self.out_channels)
+            self.gn = nn.GroupNorm(num_groups=32, num_channels=out_channels)
         if self.with_activation:
             self.activate = nn.ReLU(inplace=inplace)
 
@@ -288,7 +288,7 @@ class ConvModule(nn.module):
         return x
     
 
-def matrix_nms(seg_mask, cate_labels, cate_scores, sigma: float = 2.0, sum_masks=None):
+def matrix_nms(seg_masks, cate_labels, cate_scores, sigma: float = 2.0, sum_masks=None):
     """Matrix NMS for multi-class masks.
 
     Args:
@@ -304,10 +304,10 @@ def matrix_nms(seg_mask, cate_labels, cate_scores, sigma: float = 2.0, sum_masks
 
     n_samples = cate_labels.shape[0]
     if sum_masks is None:
-        sum_masks = seg_mask.sum((1,2)).float()
-    seg_mask = seg_mask.reshape(n_samples, -1).float()
+        sum_masks = seg_masks.sum((1, 2)).float()
+    seg_masks = seg_masks.reshape(n_samples, -1).float()
     # inter
-    inter_matrix = torch.mm(seg_mask, seg_mask.transpose(1, 0))
+    inter_matrix = torch.mm(seg_masks, seg_masks.transpose(1, 0))
     # union
     sum_masks_x = sum_masks.expand(n_samples, n_samples)
     # iou

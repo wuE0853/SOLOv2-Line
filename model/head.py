@@ -131,9 +131,9 @@ class SOLOv2Head(nn.Module):
                                               bias=norm_cfg is None))
 
 
-            self.solo_cate = nn.Conv2d(self.seg_feat_channels, self.cate_out_ch, 3, padding=1)
+        self.solo_cate = nn.Conv2d(self.seg_feat_channels, self.cate_out_ch, 3, padding=1)
 
-            self.solo_kernel = nn.Conv2d(self.seg_feat_channels, self.kernel_out_ch, 3, padding=1)
+        self.solo_kernel = nn.Conv2d(self.seg_feat_channels, self.kernel_out_ch, 3, padding=1)
 
     def init_weights(self):
         for m in self.cate_convs:
@@ -299,7 +299,7 @@ class SOLOv2Head(nn.Module):
                          zip(kernel_preds_level, grid_orders_level)]
                         for kernel_preds_level, grid_orders_level in zip(kernel_preds, zip(*grid_order_list))]
         
-         # generate masks
+        # generate masks
         ins_pred_list = []
         for b_kernel_pred in kernel_preds:
             b_mask_pred = []

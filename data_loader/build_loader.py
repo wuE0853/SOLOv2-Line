@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python 
 # -*- coding:utf-8 -*-
 import random
 import torch
@@ -31,7 +31,7 @@ class group_sampler:
         self.sampler = sampler
         self.group_ids = torch.as_tensor(group_ids)
         assert self.group_ids.dim() == 1, 'The dim of group ids Error'
-        self.bacth_size = batch_size
+        self.batch_size = batch_size
         self.drop_uneven = drop_uneven
         self.groups = torch.unique(self.group_ids).sort(0)[0]
         self._can_reuse_batches = False
@@ -65,7 +65,7 @@ class group_sampler:
         permuted_clusters = [sampled_ids[idx] for idx in permutation_ids]
 
         #splits each cluster in batch_size, and merge as a list of tensors
-        splits = [c.split(self.bacth_size) for c in permuted_clusters]
+        splits = [c.split(self.batch_size) for c in permuted_clusters]
         merged = tuple(itertools.chain.from_iterable(splits))
 
         # now each batch internally has the right order, but they are grouped by clusters.
@@ -89,7 +89,7 @@ class group_sampler:
         if self.drop_uneven:
             kept = []
             for b in batches:
-                if len(b) == self.bacth_size:
+                if len(b) == self.batch_size:
                     kept.append(b)
             batches = kept
 
@@ -125,7 +125,7 @@ def complement_batch(batch):
 
 def batch_collator_random_pad(batch):
     batch = complement_batch(batch)
-    img_batch, labels_batch, bboxed_batch, masks_batch = list(zip(*batch))
+    img_batch, labels_batch, bboxes_batch, masks_batch = list(zip(*batch))
     max_size = tuple(max(s) for s in zip(*[img.shape for img in img_batch]))
     assert max_size[0] % 32 == 0 and max_size[1] % 32 == 0, 'Error: shape error in batch_collator'
 
@@ -142,7 +142,7 @@ def batch_collator_random_pad(batch):
 
         pad_labels_batch.append(torch.tensor(labels_batch[i], dtype=torch.int64))
 
-        ori_bboxes = bboxed_batch[i]
+        ori_bboxes = bboxes_batch[i]
         pad_bboxes = ori_bboxes.copy()
         pad_bboxes[:, [0, 2]] = pad_bboxes[:, [0, 2]] + new_w
         pad_bboxes[:, [1, 3]] = pad_bboxes[:, [1, 3]] + new_h
@@ -190,7 +190,7 @@ def make_data_loader(cfg):
         group_ids = list(map(lambda y: bisect.bisect_right([1], y), aspect_ratios))
         sampler = data.RandomSampler(dataset)
         batch_sampler = group_sampler(sampler, group_ids, cfg.train_bs, drop_uneven=False) # same as drop_last
-        return data.DataLoader(dataset, num_workers=cfg.train_workers, 
+        return data.DataLoader(dataset, num_workers=cfg.train_workers,
                                batch_sampler=batch_sampler, collate_fn=batch_collator_random_pad)
     
     else:
@@ -198,6 +198,4 @@ def make_data_loader(cfg):
             collator = val_collate
         elif cfg.mode == 'detect':
             collator = detect_collate
-        return data.DataLoader(dataset, num_workers=2, 
-                               batch_size=cfg.val_bs, shuffle=False, collate_fn=collator)
-
+        return data.DataLoader(dataset, num_workers=2, batch_size=cfg.val_bs, shuffle=False, collate_fn=collator)

@@ -14,7 +14,7 @@ from val import val
 
 
 def show_ann(img, boxes, masks):
-    img = img.cpu.numpy().astype('uint8')
+    img = img.cpu().numpy().astype('uint8')
     for i in range(img.shape[0]):
         img_np = img[i].transpose(1, 2, 0)
         one_box = boxes[i].cpu().numpy()
@@ -38,7 +38,7 @@ def show_ann(img, boxes, masks):
             cv2.waitKey()
 
 
-if __name__ =='__main__':
+if __name__ == '__main__':
     cfg = Line_solov2_r50_light(mode='train')
     cfg.print_cfg()
 
@@ -55,7 +55,7 @@ if __name__ =='__main__':
     start_lr = cfg.lr
     best_loss = float('inf')
     if cfg.break_weight:
-        start_epoch = int(cfg.break_weight.split('_')[-1][:-4])
+        start_epoch = int(cfg.break_weight.split('_')[-1][:-4]) + 1
         step = (start_epoch - 1) * len_loader + 1
         model.load_state_dict(torch.load(cfg.break_weight), strict=True)
         print(f'\033[0;35mContinue training with "{cfg.break_weight}", epoch: {start_epoch}, step: {step}.\033[0m')
@@ -92,8 +92,8 @@ if __name__ =='__main__':
             with timer.counter('backward'):
                 optimizer.zero_grad()
                 loss_total.backward()
-                clip_grad.clip_grad_norm(filter(lambda p: p.requires_grad, model.parameters()),
-                                         max_norm=35, norm_type=2)
+                clip_grad.clip_grad_norm_(filter(lambda p: p.requires_grad, model.parameters()),
+                                          max_norm=35, norm_type=2)
                 
             with timer.counter('update'):
                 optimizer.step()
@@ -117,15 +117,14 @@ if __name__ =='__main__':
         if epoch % cfg.val_interval == 0:
             if epoch > cfg.start_save:
                 print(f'weights/{cfg.name()}_{epoch}.pth saved.')
-                torch.save(model.state_dict(), f'weihgts/{cfg.name()}_{epoch}.pth')
+                torch.save(model.state_dict(), f'weights/{cfg.name()}_{epoch}.pth')
 
                 if loss_total < best_loss:
                     print(f'Best model saved at epoch: {epoch}.')
-                    torch.save(model.state_dict(), f'weihgts/{cfg.name()}_best.pth')
+                    torch.save(model.state_dict(), f'weights/{cfg.name()}_best.pth')
                     best_loss = loss_total
         
             val(cfg, model)
             cfg.train()
             model.train()
             timer.reset(reset_at=step)
-

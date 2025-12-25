@@ -2,6 +2,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from utils.utils import xavier_init, ConvModule
 
+
 class FPN(nn.Module):
     def __init__(self,
                  in_channels,
@@ -31,8 +32,8 @@ class FPN(nn.Module):
         self.activation = activation
 
         if end_level == -1:
-            self.backbone_end_level = self.nums_ins
-            assert self.num_outs >= self.num_outs - start_level
+            self.backbone_end_level = self.num_ins
+            assert self.num_outs >= self.num_ins - start_level
         else:
             # if end_level < num_ins, no extra level will be allowed
             self.backbone_end_level = end_level
