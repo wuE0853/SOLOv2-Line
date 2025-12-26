@@ -1,5 +1,5 @@
-#!/usr/bin/env python
-# -*- coding:uft-8 -*-
+#!/usr/bin/env python 
+# -*- coding:utf-8 -*-
 import os
 import pdb
 import shutil
@@ -37,7 +37,7 @@ PALLETE = [
 
 if __name__ == '__main__':
     cfg = Line_solov2_r50_light(mode='detect')
-    cfg.print_cfg
+    cfg.print_cfg()
 
     model = SOLOv2(cfg).cuda()
     state_dict = torch.load(cfg.val_weight)
@@ -59,11 +59,11 @@ if __name__ == '__main__':
     timer.reset(reset_at=0)
 
     segm_json_results = []
-    for i, (img, resize_shape, img_name, img_reszied) in enumerate(data_loader):
-        timer.start()
+    for i, (img, resize_shape, img_name, img_resized) in enumerate(data_loader):
+        timer.start(i)
 
         with torch.no_grad(), timer.counter('forward'):
-            seg_result = model(img.cuda().detach, resize_shape=resize_shape, post_mode='detect')[0]
+            seg_result = model(img.cuda().detach(), resize_shape=resize_shape, post_mode='detect')[0]
 
         with timer.counter('draw'):
             if seg_result is not None:
@@ -71,28 +71,28 @@ if __name__ == '__main__':
                 cate_label = seg_result[1].cpu().numpy()
                 cate_score = seg_result[2].cpu().numpy()
 
-                seg_show = img_reszied.copy()
+                seg_show = img_resized.copy()
                 for j in range(seg_pred.shape[0]):
                     cur_mask = seg_pred[j, :, :]
                     assert cur_mask.sum() != 0, 'current mask sum == 0.'
 
-                    cur_cate = cate_label[j]
+                    cur_cate = cate_label[j] + 1
                     cur_score = cate_score[j]
 
                     color = PALLETE[j]
 
                     if cfg.detect_mode == 'overlap':
                         mask_bool = cur_mask.astype('bool')
-                        seg_show[mask_bool] = img_reszied[mask_bool] * 0.5 + np.array(color, dtype='uint8') * 0.5
+                        seg_show[mask_bool] = img_resized[mask_bool] * 0.5 + np.array(color, dtype='uint8') * 0.5
                     elif cfg.detect_mode == 'contour':
                         _, img_thre = cv2.threshold(cur_mask, 0, 255, cv2.THRESH_BINARY)
                         contours, _ = cv2.findContours(img_thre, mode=cv2.RETR_TREE, method=cv2.CHAIN_APPROX_SIMPLE)
-                        cv2.drawContours(seg_show, contours, coutourIdx=-1, color=color, thickness=1)
+                        cv2.drawContours(seg_show, contours, contourIdx=-1, color=color, thickness=1)
 
                     
                     label_text = f'{cfg.class_names[cur_cate]} {cur_score:.02f}'
                     center_y, center_x = ndimage.center_of_mass(cur_mask)
-                    vis_pos = max((int(center_x) - 10, 0), int(center_y))
+                    vis_pos = (max(int(center_x) - 10, 0), int(center_y))
                     cv2.putText(seg_show, label_text, vis_pos, cv2.FONT_HERSHEY_COMPLEX, 0.4, tuple(color))
 
 
@@ -100,7 +100,7 @@ if __name__ == '__main__':
                 # cv2.waitKey()
                 cv2.imwrite(f'{save_path}/{img_name}', seg_show)
             else:
-                cv2.imwrite(f'{save_path}/{img_name}', img_reszied)
+                cv2.imwrite(f'{save_path}/{img_name}', img_resized)
 
         timer.add_batch_time()
 
