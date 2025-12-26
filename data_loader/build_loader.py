@@ -61,7 +61,7 @@ class group_sampler:
         # with the relative order, fing the absolute order in the sampled space
         permutation_ids = [s[s.sort()[1]] for s in relative_order]
 
-        #permute each cluster so that the follow the order from the sampler
+        # permute each cluster so that they follow the order from the sampler
         permuted_clusters = [sampled_ids[idx] for idx in permutation_ids]
 
         #splits each cluster in batch_size, and merge as a list of tensors
@@ -94,7 +94,7 @@ class group_sampler:
             batches = kept
 
         return batches
-    
+
     def __iter__(self):
         if self._can_reuse_batches:
             batches = self._batches
@@ -104,14 +104,14 @@ class group_sampler:
         self._batches = batches
 
         return iter(batches)
-    
+
     def __len__(self):
         if not hasattr(self, "_batches"):
             self._batches = self._prepare_batches()
             self._can_reuse_batches = True
 
         return len(self._batches)
-    
+
 
 def complement_batch(batch):
     valid_batch = [aa for aa in batch if aa[0] is not None]
@@ -185,14 +185,12 @@ def make_data_loader(cfg):
 
     if cfg.mode == 'train':
         aspect_ratios = dataset.get_aspect_ratios()
-        
         # group in two cases: those with width / height > 1, and the other way around
         group_ids = list(map(lambda y: bisect.bisect_right([1], y), aspect_ratios))
         sampler = data.RandomSampler(dataset)
-        batch_sampler = group_sampler(sampler, group_ids, cfg.train_bs, drop_uneven=False) # same as drop_last
+        batch_sampler = group_sampler(sampler, group_ids, cfg.train_bs, drop_uneven=False)  # same as drop_last
         return data.DataLoader(dataset, num_workers=cfg.train_workers,
                                batch_sampler=batch_sampler, collate_fn=batch_collator_random_pad)
-    
     else:
         if cfg.mode == 'val':
             collator = val_collate

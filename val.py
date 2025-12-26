@@ -21,7 +21,7 @@ def val(cfg, model=None):
             state_dict = state_dict['state_dict']
         model.load_state_dict(state_dict, strict=True)
         print(f'Evaluating "{cfg.val_weight}".')
-    
+
     cfg.eval()
     model.eval()
     data_loader = make_data_loader(cfg)
@@ -87,7 +87,7 @@ def val(cfg, model=None):
 
     if 'Coco' in dataset.__class__.__name__ or 'Line' in dataset.__class__.__name__:
         coco_dt = dataset.coco.loadRes(file_path)
-        segm_eval = SelfEval(dataset.coco, coco_dt)
+        segm_eval = SelfEval(dataset.coco, coco_dt, all_points=True, iou_type='segmentation')
     # else:
     # nonCOCO dataset and annotations should use other funcntion to get gt and dt
 

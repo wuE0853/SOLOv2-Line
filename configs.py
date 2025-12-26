@@ -85,7 +85,7 @@ class Solov2_res50:
         self.mode = 'train'
 
     def eval(self):
-        self.mode = 'eval'
+        self.mode = 'val'
 
 
 class Solov2_light_res50(Solov2_res50):

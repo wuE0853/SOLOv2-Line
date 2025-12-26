@@ -180,14 +180,14 @@ def build_norm_layer(cfg, num_features, postfix=''):
         layer = norm_layer(num_features, **cfg_)
         if layer_type == 'SyncBN':
             layer._specify_ddp_gpu_num(1)
-        else:
-            assert 'num_groups' in cfg_, 'num_groups is necessary in GN'
-            layer = norm_layer(num_channels=num_features, **cfg_)
+    else:
+        assert 'num_groups' in cfg_, 'num_groups is necessary in GN'
+        layer = norm_layer(num_channels=num_features, **cfg_)
+    
+    for param in layer.parameters():
+        param.requires_grad = requires_grad
         
-        for param in layer.parameters():
-            param.requires_grad = requires_grad
-        
-        return name, layer
+    return name, layer
 
 
 class ConvModule(nn.Module):
