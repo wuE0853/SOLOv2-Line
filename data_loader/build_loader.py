@@ -189,7 +189,8 @@ def make_data_loader(cfg):
         group_ids = list(map(lambda y: bisect.bisect_right([1], y), aspect_ratios))
         sampler = data.RandomSampler(dataset)
         batch_sampler = group_sampler(sampler, group_ids, cfg.train_bs, drop_uneven=False)  # same as drop_last
-        return data.DataLoader(dataset, num_workers=cfg.train_workers,
+        # When GPU utils is low, use pin_memory=True with large batch_size
+        return data.DataLoader(dataset, num_workers=cfg.train_workers,pin_memory=True,
                                batch_sampler=batch_sampler, collate_fn=batch_collator_random_pad)
     else:
         if cfg.mode == 'val':

@@ -1,7 +1,6 @@
 #!/usr/bin/env python 
 # -*- coding:utf-8 -*-
 import os
-import pdb
 import shutil
 import datetime
 
@@ -48,7 +47,7 @@ if __name__ == '__main__':
     model.load_state_dict(state_dict, strict=True)
     model.eval()
 
-    save_path = 'results/detect/line'
+    save_path = 'results\detect\line'
     if os.path.exists(save_path):
         shutil.rmtree(save_path)
     os.makedirs(save_path, exist_ok=True)
@@ -98,7 +97,11 @@ if __name__ == '__main__':
 
                 # cv2.imshow('aa', seg_show)
                 # cv2.waitKey()
-                cv2.imwrite(f'{save_path}/{img_name}', seg_show)
+                # cv2.imwrite(f'{save_path}/{img_name}', seg_show) # linux
+
+                img_name = img_name.split('\\')[-1]
+                cv2.imwrite(os.path.join(save_path, img_name), seg_show) # Win
+                # cv2.imencode('.jpg', seg_show)[1].tofile(os.path.join(save_path, img_name))
             else:
                 cv2.imwrite(f'{save_path}/{img_name}', img_resized)
 
