@@ -4,7 +4,7 @@ This is a SOLOv2 project based on only pytorch and opencv-python
 created on Nov, 26
 
 ## Update ##
-Jan, 19 V1.1: ** DCNv2 is available now! **
+Jan, 19 V1.1:  __DCNv2 is available now!__
 For using it, choose the config: Line_solov2_r50_light_dcn in train.py and detect.py
 
 ## Dependency ##
