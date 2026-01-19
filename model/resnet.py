@@ -3,6 +3,8 @@ import torch
 import torch.nn as nn
 from utils.utils import constant_init, kaiming_init, build_conv_layer, build_norm_layer, load_state_dict
 from torch.nn.modules.batchnorm import _BatchNorm
+from torchvision.ops import DeformConv2d
+from numbers import Integral
 
 
 class BasicBlock(nn.Module):
@@ -15,8 +17,10 @@ class BasicBlock(nn.Module):
                  dilation=1,
                  downsample=None,
                  with_cp=False,
-                 norm_cfg=dict(type='BN')):
+                 norm_cfg=dict(type='BN'),
+                 dcn_v2=False):
         super(BasicBlock, self).__init__()
+        self.dcn_v2 = dcn_v2
 
         self.norm1_name, norm1 = build_norm_layer(norm_cfg, planes, postfix=1)
         self.norm2_name, norm2 = build_norm_layer(norm_cfg, planes, postfix=2)
@@ -30,7 +34,14 @@ class BasicBlock(nn.Module):
             dilation=dilation,
             bias=False)
         self.add_module(self.norm1_name, norm1)
-        self.conv2 = build_conv_layer(planes, planes, 3, padding=1, bias=False)
+
+        if not self.dcn_v2:
+            self.conv2 = build_conv_layer(planes, planes, 3, padding=1, bias=False)
+        else:
+            # default kernel_size=3, out_channel = 3 * 3 ** 2
+            self.conv_offset = build_conv_layer(planes, 27, 3, stride=stride,padding=1, bias=False)
+            self.conv2 = DeformConv2d(planes, planes, 3, stride=stride, padding=1, dilation=dilation, bias=False)
+
         self.add_module(self.norm2_name, norm2)
 
         self.relu = nn.ReLU(inplace=True)
@@ -54,7 +65,14 @@ class BasicBlock(nn.Module):
         out = self.norm1(out)
         out = self.relu(out)
 
-        out = self.conv2(out)
+        if not self.dcn_v2:
+            out = self.conv2(out)
+        else:
+            offset_mask = self.conv_offset(out)
+            offset, mask = torch.split(offset_mask, [18, 9], dim=1) # [2 * 3 ** 2, 3 ** 2] for 3 is the kernel_size
+            mask = torch.sigmoid(mask)
+            out = self.conv2(out, offset, mask=mask)
+
         out = self.norm2(out)
 
         if self.downsample is not None:
@@ -74,6 +92,7 @@ class Bottleneck(nn.Module):
                  planes,
                  stride=1,
                  dilation=1,
+                 dcn_v2=False,
                  downsample=None,
                  norm_cfg=dict(type='BN')):
         super(Bottleneck, self).__init__()
@@ -82,6 +101,7 @@ class Bottleneck(nn.Module):
         self.planes = planes
         self.stride = stride
         self.dilation = dilation
+        self.dcn_v2 = dcn_v2
         self.norm_cfg = norm_cfg
 
         self.conv1_stride = 1
@@ -99,14 +119,19 @@ class Bottleneck(nn.Module):
             bias=False)
         self.add_module(self.norm1_name, norm1)
 
-        self.conv2 = build_conv_layer(
-            planes,
-            planes,
-            kernel_size=3,
-            stride=self.conv2_stride,
-            padding=dilation,
-            dilation=dilation,
-            bias=False)
+        if not self.dcn_v2:
+            self.conv2 = build_conv_layer(
+                planes,
+                planes,
+                kernel_size=3,
+                stride=self.conv2_stride,
+                padding=dilation,
+                dilation=dilation,
+                bias=False)
+        else:
+            # default kernel_size=3, out_channel = 3 * 3 ** 2
+            self.conv_offset = build_conv_layer(planes, 27, 3, stride=self.conv2_stride, padding=1, bias=False)
+            self.conv2 = DeformConv2d(planes, planes, 3, stride=self.conv2_stride, padding=1, dilation=dilation, bias=False)
 
         self.add_module(self.norm2_name, norm2)
         self.conv3 = build_conv_layer(
@@ -136,7 +161,15 @@ class Bottleneck(nn.Module):
         out = self.conv1(x)
         out = self.norm1(out)
         out = self.relu(out)
-        out = self.conv2(out)
+
+        if not self.dcn_v2:
+            out = self.conv2(out)
+        else:
+            offset_mask = self.conv_offset(out)
+            offset, mask = torch.split(offset_mask, [18, 9], dim=1)  # [2 * 3 ** 2, 3 ** 2] for 3 is the kernel_size
+            mask = torch.sigmoid(mask)
+            out = self.conv2(out, offset, mask=mask)
+
         out = self.norm2(out)
         out = self.relu(out)
         out = self.conv3(out)
@@ -157,6 +190,7 @@ def make_res_layer(block,
                    blocks,
                    stride=1,
                    dilation=1,
+                   dcn_v2=False,
                    norm_cfg=dict(type='BN')):
     downsample = None
     if stride != 1 or inplanes != planes * block.expansion:
@@ -176,6 +210,7 @@ def make_res_layer(block,
         stride=stride,
         dilation=dilation,
         downsample=downsample,
+        dcn_v2=dcn_v2,
         norm_cfg=norm_cfg)]
 
     inplanes = planes * block.expansion
@@ -186,6 +221,7 @@ def make_res_layer(block,
                 planes=planes,
                 stride=1,
                 dilation=dilation,
+                dcn_v2=dcn_v2,
                 norm_cfg=norm_cfg))
 
     return nn.Sequential(*layers)
@@ -230,6 +266,7 @@ class ResNet(nn.Module):
                  dilations=(1, 1, 1, 1),
                  out_indices=(0, 1, 2, 3),
                  frozen_stages=-1,
+                 dcn_v2_stages=[-1],
                  norm_cfg=dict(type='BN', requires_grad=True),
                  norm_eval=True,
                  zero_init_residual=True):
@@ -244,6 +281,11 @@ class ResNet(nn.Module):
         assert len(strides) == len(dilations) == num_stages
         self.out_indices = out_indices
         assert max(out_indices) < num_stages
+
+        if isinstance(dcn_v2_stages, Integral):
+            dcn_v2_stages = [dcn_v2_stages]
+        assert max(dcn_v2_stages) < num_stages
+        self.dcn_v2_stages = dcn_v2_stages
 
 
         self.frozen_stages = frozen_stages
@@ -270,6 +312,7 @@ class ResNet(nn.Module):
                 num_blocks,
                 stride=stride,
                 dilation=dilation,
+                dcn_v2=(i in self.dcn_v2_stages),
                 norm_cfg=norm_cfg)
 
             self.inplanes = planes * self.block.expansion
@@ -321,11 +364,11 @@ class ResNet(nn.Module):
                 elif isinstance(m, (_BatchNorm, nn.GroupNorm)):
                     constant_init(m, 1)
 
-            #todo: self.dcn
-            if self.dcn is not None:
+
+            if max(self.dcn_v2_stages) >= 0:
                 for m in self.modules():
-                    if isinstance(m, Bottleneck) and hasattr(m, 'conv2_offset'):
-                        constant_init(m.conv2_offset, 0)
+                    if isinstance(m, Bottleneck) and hasattr(m, 'conv_offset'):
+                        constant_init(m.conv_offset, 0)
 
             if self.zero_init_residual:
                 for m in self.modules():
@@ -365,4 +408,7 @@ if __name__ == '__main__':
     net = ResNet(depth=50)
     inputs = torch.rand(1, 3, 512, 512)
     out = net(inputs)
+    print(len(out))
+    print(out[0].size())
+    print(out[1].size())
     

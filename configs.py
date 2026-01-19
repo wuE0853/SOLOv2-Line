@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
-import pdb
 from data_loader.dataset import CocoIns, LineIns
 from data_loader.augmentations import TrainAug, ValAug
 # from utils.utils import COCO_CLASSES
@@ -21,6 +20,7 @@ class Solov2_res50:
         self.pretrained = 'weights/backbone_resnet50.pth'
         self.break_weight = ''
         self.resnet_depth = 50
+        self.dcn_v2_stages = [-1]
         self.fpn_in_c = [256, 512, 1024, 2048]
 
         # self.class_names = COCO_CLASSES
@@ -39,7 +39,7 @@ class Solov2_res50:
         self.lr_decay_steps = (27, 33)
         self.train_aug = TrainAug(img_scale=[(1333, 800), (1333, 768), (1333, 736),
                                              (1333, 704), (1333, 672), (1333, 640)])
-        self.train_workers = 8
+        self.train_workers = 16
         self.val_interval = 10
         self.start_save = 0
 
@@ -106,31 +106,70 @@ class Line_solov2_r50_light(Solov2_light_res50):
     def __init__(self, mode):
         super().__init__(mode)
         self.dataset = LineIns            
-        self.data_root = '/home/amax/Public/SOLOv2_minimal/dataset/line_sep_d'
+        self.data_root = 'dataset/line1217_cr_p_d'
         self.train_imgs = self.data_root + '/train/'
-        self.train_ann = self.data_root + '/train.json'
+        self.train_ann = self.data_root + '/annotations/train.json'
         self.val_imgs = self.data_root + '/val/'
-        self.val_ann = self.data_root + '/val.json'
+        self.val_ann = self.data_root + '/annotations/val.json'
 
         self.pretrained = 'weights/backbone_resnet50.pth'
         self.class_names = ('_background_','Line')
         self.num_classes = 2
-        self.epochs = 400
-        self.warm_up_iters = 500  # bs=16时，基本就是500左右
+        self.epochs = 1600
+        self.warm_up_iters = 50  # bs=16时，基本就是500左右
         self.lr_decay_steps = (300, 360)
         self.start_save = 100
-        self.val_interval = 20
-        self.train_aug = TrainAug(mean=[0., 0., 0], std=[255., 255., 255.],
-                                  img_scale=[(576, 576), (544, 544),
-                                             (512, 512), (480, 480), (448, 448)],
+        self.val_interval = 200
+        self.train_aug = TrainAug(mean=[0., 0., 0], std=[255., 255., 255],
+                                  img_scale=[(768, 512), (768, 480), (768, 448),
+                                             (768, 416), (768, 384), (768, 352)],
                                   v_flip=True)
         self.break_weight = ''
 
         self.val_aug = ValAug(mean=[0., 0., 0], std=[255., 255., 255],
                               img_scale=[(512, 512)])
         
-        self.val_weight = 'weights/Line_solov2_r50_light_380.pth'
-        self.detect_images = '/home/amax/Public/SOLOv2_minimal/dataset/line_test77'
+        self.val_weight = 'weights/Line_solov2_r50_light_gold280.pth'
+        self.detect_images = 'dataset/test1217_crop'
+        if self.mode in ('detect', 'onnx'):
+            self.postprocess_para['update_thr'] = 0.3
+        self.postprocess_para['mask_thr'] = 0.5
+
+        self.onnx_trans = base_input_trans
+        self.onnx_shape = (512, 512)
+
+class Line_solov2_r50_light_dcn(Solov2_light_res50):
+    def __init__(self, mode):
+        super().__init__(mode)
+
+        self.dcn_v2_stages = [1, 2, 3]
+
+        self.dataset = LineIns
+        self.data_root = 'dataset/line1217_512_d'
+        self.train_imgs = self.data_root + '/train/'
+        self.train_ann = self.data_root + '/annotations/train.json'
+        self.val_imgs = self.data_root + '/val/'
+        self.val_ann = self.data_root + '/annotations/val.json'
+
+        self.pretrained = 'weights/backbone_resnet50.pth'
+        self.class_names = ('_background_', 'Line')
+        self.num_classes = 2
+        self.epochs = 400
+        self.warm_up_iters = 500  # bs=16时，基本就是500左右
+        self.lr_decay_steps = (300, 360)
+        self.start_save = 100
+        self.val_interval = 20
+        self.train_aug = TrainAug(mean=[0., 0., 0], std=[255., 255., 255],
+                                    img_scale=[(768, 512), (768, 480), (768, 448),
+                                                (768, 416), (768, 384), (768, 352)],
+                                    v_flip=True)
+        self.break_weight = ''
+
+        self.val_aug = ValAug(mean=[0., 0., 0], std=[255., 255., 255],
+                                img_scale=[(512, 512)])
+
+        self.val_weight = 'weights/Line_solov2_r50_light_dcn_best.pth'
+        self.detect_images = 'dataset/test1217_crop'
         if self.mode in ('detect', 'onnx'):
             self.postprocess_para['update_thr'] = 0.3
         self.postprocess_para['mask_thr'] = 0.5
