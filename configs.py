@@ -106,7 +106,7 @@ class Line_solov2_r50_light(Solov2_light_res50):
     def __init__(self, mode):
         super().__init__(mode)
         self.dataset = LineIns            
-        self.data_root = 'dataset/line1217_cr_p_d'
+        self.data_root = 'dataset/line1217_cp20_d'
         self.train_imgs = self.data_root + '/train/'
         self.train_ann = self.data_root + '/annotations/train.json'
         self.val_imgs = self.data_root + '/val/'
@@ -115,21 +115,21 @@ class Line_solov2_r50_light(Solov2_light_res50):
         self.pretrained = 'weights/backbone_resnet50.pth'
         self.class_names = ('_background_','Line')
         self.num_classes = 2
-        self.epochs = 1600
-        self.warm_up_iters = 50  # bs=16时，基本就是500左右
+        self.epochs = 400
+        self.warm_up_iters = 500  # bs=16时，基本就是500左右
         self.lr_decay_steps = (300, 360)
         self.start_save = 100
-        self.val_interval = 200
+        self.val_interval = 20
         self.train_aug = TrainAug(mean=[0., 0., 0], std=[255., 255., 255],
                                   img_scale=[(768, 512), (768, 480), (768, 448),
                                              (768, 416), (768, 384), (768, 352)],
                                   v_flip=True)
-        self.break_weight = ''
+        self.break_weight = 'Line_solov2_r50_light_200.pth'
 
         self.val_aug = ValAug(mean=[0., 0., 0], std=[255., 255., 255],
                               img_scale=[(512, 512)])
         
-        self.val_weight = 'weights/Line_solov2_r50_light_gold280.pth'
+        self.val_weight = 'weights/Line_solov2_r50_light_blue380.pth'
         self.detect_images = 'dataset/test1217_crop'
         if self.mode in ('detect', 'onnx'):
             self.postprocess_para['update_thr'] = 0.3

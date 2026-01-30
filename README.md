@@ -3,6 +3,16 @@
 This is a SOLOv2 project based on only pytorch and opencv-python
 created on Nov, 26
 
+## Update ##
+Jan, 19 V1.1: _DCNv2 is available now!_
+
+For using it, choose the config: Line_solov2_r50_light_dcn in train.py and detect.py
+
+Jan 30 V2.0: C++ implement is added.
+
+User can use export to get the .pt file of the model, and test with detect.jit. 
+As for C++, the cmake project and its [README](cpp_build/README_cpp.md) can be found in `cpp_build`.
+
 ## Dependency ##
 Pytorch 1.13.1
 CUDA 11.7 + cudnn 8.5.0

@@ -36,8 +36,8 @@ class SOLOv2(nn.Module):
     def forward(self, img, gt_labels=None, gt_bboxes=None, gt_masks=None, ori_shape=None, resize_shape=None,
                 post_mode='detect'):
         # donot input the grayscale image, but input as colorRGB
-        if self.mode == 'onnx':
-            img = self.onnx_trans(img)
+        # if self.mode == 'onnx':
+        #     img = self.onnx_trans(img)
 
         x = self.backbone(img)
         x = self.neck(x)  # (bs, fpn_c_out, H/4, W/4), down sample ratio 4, 8, 16, 32, 64
@@ -50,8 +50,9 @@ class SOLOv2(nn.Module):
         else:
             if self.mode == 'onnx':
                 resize_shape = self.onnx_shape
+                return mask_feat_pred, cate_preds, kernel_preds
 
-            seg_result = self.bbox_head.get_seg(cate_preds, kernel_preds, mask_feat_pred, ori_shape,
+            if self.mode == 'val' or self.mode == 'detect':
+                seg_result = self.bbox_head.get_seg(cate_preds, kernel_preds, mask_feat_pred, ori_shape,
                                                 resize_shape, self.postprocess_cfg, post_mode)
-
-            return seg_result
+                return seg_result
