@@ -1,0 +1,26 @@
+cmake_minimum_required(VERSION 3.18 FATAL_ERROR)
+project(libtorch_inference)
+
+# 设置C++标准
+set(CMAKE_CXX_STANDARD 14)
+
+# 查找LibTorch包。请将/path/to/libtorch替换为你解压LibTorch的实际路径
+set(CMAKE_PREFIX_PATH "C:\\libtorch-win-shared-with-deps-1.13.1+cu117\\libtorch")
+find_package(Torch REQUIRED)
+
+set(OpenCV_DIR "C:/opencv/build")
+find_package(OpenCV REQUIRED)
+
+# file(GLOB HEADER_FILES "include/*.h")
+# 创建可执行文件
+add_executable(inference_app main.cpp)
+
+# target_include_directories(inference_app PRIVATE ./include)
+
+# 链接LibTorch库
+target_link_libraries(inference_app ${TORCH_LIBRARIES} ${OpenCV_LIBS})
+
+# 设置属性（如在Windows上使用MSVC编译器时）
+if(MSVC)
+  set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
+endif()

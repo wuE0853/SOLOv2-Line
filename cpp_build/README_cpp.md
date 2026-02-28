@@ -1,5 +1,13 @@
 The C++ implementation based on Libtorch is shown in this dir.
 
+### Update ###
+Feb 28, 2026 The new version cpp program is updated with patch_generator, 
+with which you can cut a large original image into small 512*512 patches and then reconstruct them.
+
+And NEWS: v2.1.0 contains a simple UI for inference app. The UI relies on Opencv3.X+ but without Qt.
+
+The UI version codes can be found in `./cpp_build/cmake_UI`.
+
 ### installation ###
 Recently the project is tested on win10. Only supported on Libtorch-release.
 Dependency as bellow:
