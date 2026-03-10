@@ -51,8 +51,7 @@ class SOLOv2(nn.Module):
             if self.mode == 'onnx':
                 resize_shape = self.onnx_shape
                 return mask_feat_pred, cate_preds, kernel_preds
-
-            if self.mode == 'val' or self.mode == 'detect':
-                seg_result = self.bbox_head.get_seg(cate_preds, kernel_preds, mask_feat_pred, ori_shape,
+                
+            seg_result = self.bbox_head.get_seg(cate_preds, kernel_preds, mask_feat_pred, ori_shape,
                                                 resize_shape, self.postprocess_cfg, post_mode)
-                return seg_result
+            return seg_result
